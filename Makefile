@@ -1,8 +1,11 @@
 all:
-	gcc *.c -o ezdbg -Wall -Wextra -pedantic
+	gcc *.c -o ezdbg -Wall -Wextra -pedantic -ldwarf -lelf
 
 test:
-	gcc -g tests/test.c -o test
+	gcc -g tests/test.c -o tests/test
 
 clean:
-	rm -rf ezdbg tests/test && clear
+	rm -rf ezdbg && clear
+
+run:
+	./ezdbg tests/test

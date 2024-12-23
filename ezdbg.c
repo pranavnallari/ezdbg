@@ -6,17 +6,19 @@ int main(int argc, char *argv[]) {
         fprintf(stderr, "Usage : ezdbg <filename.c>\n");
         return EXIT_FAILURE;
     }
-
     pid_t pid = fork();
     if (pid < 0) {
         perror("Error Occurred while starting debugger....\n");
         return EXIT_FAILURE;
     }
-
+    save_terminal();
+    init_screen();
     if (pid == 0) {
-        run_program((const)argv[1], argc, argv);
+        run_program((const char*)argv[1], argc, argv);
     } else {
-        run_debugger((const)argv[1]);
+        run_debugger((const char*)argv[1], pid);
     }
+    restore_terminal();
+    fflush(stdout);
     return EXIT_SUCCESS;
 }
