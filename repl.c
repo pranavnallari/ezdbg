@@ -46,10 +46,15 @@ void repl(pid_t child_pid) {
         switch(cmd) {
             case HELP:
             {
+                if (args) {
+                    invalid();
+                }
+                help();
                 break;
             }
             case START:
             {
+                start(child_pid);
                 break;
             }
             case BREAK:
@@ -98,14 +103,17 @@ void repl(pid_t child_pid) {
             }
             case QUIT:
             {
+                return;
                 break;
             }
             case INVALID:
             {
+                invalid();
                 break;
             }
             default:
             {
+                invalid();
                 break;
             }
         }    

@@ -3,7 +3,7 @@
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "Usage : ezdbg <filename.c>\n");
+        fprintf(stderr, "Usage : ezdbg <filename>\n");
         return EXIT_FAILURE;
     }
     pid_t pid = fork();

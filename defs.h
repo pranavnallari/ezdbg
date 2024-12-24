@@ -55,6 +55,8 @@ extern void welcome_message();
 extern COMMANDS parse_command(char *command);
 // commands.c
 extern void help();
+extern void start(pid_t pid);
+extern void invalid();
 // display.c
 extern void clear_screen();
 extern int init_screen();
@@ -65,12 +67,14 @@ extern void restore_terminal();
 extern void init_dwarf(const char* filename);
 extern void cleanup_dwarf();
 // breakpoint.c
-extern static void enable_bp(pid_t pid, S_Breakpoint *bp);
-extern static void disable_bp(pid_t pid, S_Breakpoint *bp);
-extern S_Breakpoint* create_bp(pid_t pid, void *addr);
+extern void enable_bp(pid_t pid, S_Breakpoint *bp);
+extern void disable_bp(pid_t pid, S_Breakpoint *bp);
+extern S_Breakpoint create_bp(pid_t pid, void *addr);
 extern void free_bp(S_Breakpoint *bp);
 extern void init_bpmngr();
+extern void* get_func_addr(const char * func_name);
 //util.c
 extern void procmsg(const char* format, ...);
+extern unsigned long long get_target_ip(pid_t pid);
 
 #endif

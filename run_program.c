@@ -20,4 +20,7 @@ void run_program(const char *filename, int argc, char *argv[]) {
         execl(filename, filename, NULL);
         perror("execl error");
     }
+
+    printf("Failed to execute child program...\n");
+    exit(EXIT_FAILURE);
 }
