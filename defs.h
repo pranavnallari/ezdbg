@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include <signal.h>
+#include <ctype.h>
 #include <string.h>
 #include <errno.h>
 #include <syscall.h>
@@ -22,7 +23,7 @@
 #include <libdwarf/libdwarf.h>
 #include <libelf.h>
 /* GLOBAL */
-typedef enum {HELP, START, BREAK, CLEAR, CONTINUE, STEP, STEP_INTO, LIST_BP, INSPECT_REGS, SHOW_CALL_STACK, PRINT_VAR, MEM_DUMP, STOP, QUIT, INVALID} COMMANDS;
+typedef enum {HELP, START, BREAK, CLEAR, CONTINUE, STEP, LIST_BP, INSPECT_REGS, MEM_DUMP, QUIT, INVALID} COMMANDS;
 typedef struct {
     void *addr;
     unsigned orig_data;
@@ -39,7 +40,6 @@ extern struct termios saved_attributes;
 // dwarf.c
 extern Dwarf_Debug dwarf_debug;
 extern Elf *elf;
-// commands.c
 // breakpoints.c
 extern S_brkpt_mngr bpmngr;
 
@@ -56,6 +56,15 @@ extern COMMANDS parse_command(char *command);
 // commands.c
 extern void help();
 extern void start(pid_t pid);
+extern void set_bp_addr(pid_t pid, void *addr);
+extern void set_bp_by_func_name(pid_t pid, const char *func_name);
+extern void cont(pid_t pid, S_Breakpoint *bp);
+extern void clear_bp_by_addr(pid_t pid, void *addr);
+extern void clear_bp_by_func_name(pid_t pid, const char *func_name);
+extern void step(pid_t pid);
+extern void list_bp();
+extern void inspect_regs(pid_t pid);
+void mem_dump(pid_t pid, unsigned from, unsigned to);
 extern void invalid();
 // display.c
 extern void clear_screen();
@@ -75,6 +84,6 @@ extern void init_bpmngr();
 extern void* get_func_addr(const char * func_name);
 //util.c
 extern void procmsg(const char* format, ...);
-extern unsigned long long get_target_ip(pid_t pid);
+extern int is_numeric(const char *str);
 
 #endif

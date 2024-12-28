@@ -10,9 +10,10 @@ void procmsg(const char* format, ...) {
     va_end(ap);
 }
 
-
-unsigned long long get_target_ip(pid_t pid) {
-	struct user_regs_struct regs;
-	ptrace(PTRACE_GETREGS, pid, 0, &regs);
-	return regs.rip;
+int is_numeric(const char *str) {
+    if (!str) return 0;
+    for (int i = 0; str[i]; i++) {
+        if (!isxdigit(str[i])) return 0;
+    }
+    return 1;
 }

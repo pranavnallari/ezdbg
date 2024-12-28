@@ -48,6 +48,7 @@ void disable_bp(pid_t pid, S_Breakpoint *bp) {
 S_Breakpoint create_bp(pid_t pid, void *addr) {
     S_Breakpoint bp = {.addr = addr, .orig_data = 0};
     enable_bp(pid, &bp);
+    assert(&bp);
     return bp;
 }
 
@@ -105,5 +106,3 @@ void* get_func_addr(const char* func_name) {
 
     return NULL; // Function not found
 }
-
-
