@@ -16,7 +16,7 @@ COMMANDS parse_command(char *command) {
     else if (strcmp("continue", command) == 0) return CONTINUE;
     else if (strcmp("step", command) == 0) return STEP;
     else if (strcmp("list_bp", command) == 0) return LIST_BP;
-    else if (strcmp("inspect", command) == 0) return INSPECT_REGS;
+    else if (strcmp("inspect_regs", command) == 0) return INSPECT_REGS;
     else if (strcmp("memory_dump", command) == 0) return MEM_DUMP;
     else if (strcmp("quit", command) == 0) return QUIT;
     else return INVALID;
@@ -63,7 +63,7 @@ void repl(pid_t child_pid) {
                 if (!args) {
                     printf("Error: 'break' command requires an address or function name.\n");
                 } else if (is_numeric(args)) {
-                    void *addr = (void *)strtol(args, NULL, 16);
+                    void *addr = (void *)(uintptr_t)strtoull(args, NULL, 16);
                     set_bp_addr(child_pid, addr);
                 } else {
                     set_bp_by_func_name(child_pid, args);
@@ -74,7 +74,7 @@ void repl(pid_t child_pid) {
                 if (!args) {
                     printf("Error: 'clear' command requires an address or function name.\n");
                 } else if (is_numeric(args)) {
-                    void *addr = (void *)strtol(args, NULL, 16);
+                    void *addr = (void *)(uintptr_t)strtoull(args, NULL, 16);
                     clear_bp_by_addr(child_pid, addr);
                 } else {
                     clear_bp_by_func_name(child_pid, args);
@@ -123,8 +123,8 @@ void repl(pid_t child_pid) {
                     if (!start_str || !end_str) {
                         printf("Error: 'memory_dump' requires two arguments (start and end addresses).\n");
                     } else {
-                        unsigned start = strtol(start_str, NULL, 16);
-                        unsigned end = strtol(end_str, NULL, 16);
+                        uintptr_t start = (uintptr_t)strtoull(start_str, NULL, 16);
+                        uintptr_t end   = (uintptr_t)strtoull(end_str,   NULL, 16);
 
                         if (start > end) {
                             printf("Error: Start address cannot be greater than end address.\n");

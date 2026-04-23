@@ -12,6 +12,7 @@
 #include <sys/ptrace.h>
 #include <termios.h>
 #include <fcntl.h>
+#include <limits.h>
 #include <sys/wait.h>
 #include <sys/ioctl.h>
 #include <sys/reg.h>
@@ -26,7 +27,7 @@
 typedef enum {HELP, START, BREAK, CLEAR, CONTINUE, STEP, LIST_BP, INSPECT_REGS, MEM_DUMP, QUIT, INVALID} COMMANDS;
 typedef struct {
     void *addr;
-    unsigned orig_data;
+    unsigned long orig_data;
 } S_Breakpoint;
 #define MAX_BREAKPOINTS 100
 typedef struct {
@@ -42,13 +43,16 @@ extern Dwarf_Debug dwarf_debug;
 extern Elf *elf;
 // breakpoints.c
 extern S_brkpt_mngr bpmngr;
+// base address of the target binary (non-zero for PIE/ASLR binaries)
+extern uintptr_t base_address;
 
 /* FUNCTIONS */
 
 // run_program.c
 extern void run_program(const char* filename, int argc, char* argv[]);
-//run_debugger.c
+// run_debugger.c
 extern void run_debugger(const char* filename, pid_t child_pid);
+extern uintptr_t get_base_address(pid_t pid, const char *filename);
 //repl.c
 extern void repl(pid_t child_pid);
 extern void welcome_message();
@@ -64,7 +68,7 @@ extern void clear_bp_by_func_name(pid_t pid, const char *func_name);
 extern void step(pid_t pid);
 extern void list_bp();
 extern void inspect_regs(pid_t pid);
-void mem_dump(pid_t pid, unsigned from, unsigned to);
+void mem_dump(pid_t pid, uintptr_t from, uintptr_t to);
 extern void invalid();
 // display.c
 extern void clear_screen();
@@ -82,6 +86,7 @@ extern S_Breakpoint create_bp(pid_t pid, void *addr);
 extern void free_bp(S_Breakpoint *bp);
 extern void init_bpmngr();
 extern void* get_func_addr(const char * func_name);
+extern char* get_func_name_by_addr(void *addr);
 //util.c
 extern void procmsg(const char* format, ...);
 extern int is_numeric(const char *str);

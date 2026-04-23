@@ -4,6 +4,7 @@
 
 Dwarf_Debug dwarf_debug = NULL;
 Elf *elf = NULL;
+static int dwarf_fd = -1;
 
 
 void init_dwarf(const char *filename) {
@@ -16,6 +17,7 @@ void init_dwarf(const char *filename) {
         perror("Failed to open file");
         exit(EXIT_FAILURE);
     }
+    dwarf_fd = fd;
 
     if (elf_version(EV_CURRENT) == EV_NONE) {
         fprintf(stderr, "invalid elf lib version\n");
@@ -55,5 +57,9 @@ void cleanup_dwarf() {
     }
     if (elf) {
         elf_end(elf);
+    }
+    if (dwarf_fd >= 0) {
+        close(dwarf_fd);
+        dwarf_fd = -1;
     }
 }

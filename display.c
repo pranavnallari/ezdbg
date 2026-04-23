@@ -19,7 +19,7 @@ void clear_screen() {
 }
 
 void save_terminal() {
-    if (tcgetattr(STDOUT_FILENO, &saved_attributes) < 0) {
+    if (tcgetattr(STDIN_FILENO, &saved_attributes) < 0) {
         perror("failed to save terminal");
         return;
     }
@@ -28,7 +28,7 @@ void save_terminal() {
 }
 
 void restore_terminal() {
-    if (tcsetattr(STDOUT_FILENO, TCSANOW, &saved_attributes) < 0) {
+    if (tcsetattr(STDIN_FILENO, TCSANOW, &saved_attributes) < 0) {
         perror("Failed to restore terminal");
         return;
     }

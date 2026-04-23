@@ -26,32 +26,43 @@ void help() {
 
 void start(pid_t pid) {
     if (bpmngr.count == 0) {
-        procmsg("No BreakPoints encountered....Automatically stopping at main(0x%X)..\n", get_func_addr("main"));
+        void *main_addr = get_func_addr("main");
+        if (!main_addr) {
+            fprintf(stderr, "Error: could not resolve address of 'main'. Is the binary compiled with debug info (-g)?\n");
+            return;
+        }
+        procmsg("No breakpoints set. Automatically stopping at main (0x%lX)...\n", (unsigned long)main_addr);
+        set_bp_addr(pid, main_addr);
     } else {
         procmsg("Stopping at first breakpoint.\n");
-        enable_bp(pid, &bpmngr.bps[0]);
+    }
 
-        if (ptrace(PTRACE_CONT, pid, NULL, NULL) < 0) {
-            perror("ptrace failure while continuing execution");
-            exit(EXIT_FAILURE);
-        }
+    enable_bp(pid, &bpmngr.bps[0]);
 
-        int status;
-        if (waitpid(pid, &status, 0) < 0) {
-            perror("waitpid failed");
-            exit(EXIT_FAILURE);
-        }
+    if (ptrace(PTRACE_CONT, pid, NULL, NULL) < 0) {
+        perror("ptrace failure while continuing execution");
+        exit(EXIT_FAILURE);
+    }
 
-        if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP) {
-            procmsg("Hit breakpoint at address: %p\n", bpmngr.bps[0].addr);
-        } else {
-            fprintf(stderr, "Unexpected stop: Status - %d\n", status);
-        }
+    int status;
+    if (waitpid(pid, &status, 0) < 0) {
+        perror("waitpid failed");
+        exit(EXIT_FAILURE);
+    }
+
+    if (WIFSTOPPED(status) && WSTOPSIG(status) == SIGTRAP) {
+        procmsg("Hit breakpoint at address: %p\n", bpmngr.bps[0].addr);
+    } else {
+        fprintf(stderr, "Unexpected stop: Status - %d\n", status);
     }
 }
 
 void set_bp_addr(pid_t pid, void *addr) {
     assert(addr);
+    if (bpmngr.count >= MAX_BREAKPOINTS) {
+        fprintf(stderr, "Error: maximum breakpoint limit (%d) reached.\n", MAX_BREAKPOINTS);
+        return;
+    }
     bpmngr.bps[bpmngr.count] = create_bp(pid, addr);
     bpmngr.count++;
 }
@@ -66,8 +77,32 @@ void cont(pid_t pid, S_Breakpoint *bp) {
     struct user_regs_struct regs;
     int wait_status;
 
-    ptrace(PTRACE_GETREGS, pid, 0, &regs);
-    assert(regs.rip == (unsigned long long)bp->addr+1);
+    if (ptrace(PTRACE_GETREGS, pid, 0, &regs) < 0) {
+        perror("ptrace GETREGS failed in cont");
+        return;
+    }
+
+    // If no bp passed, find the one matching rip-1 (rip advances past int3)
+    if (bp == NULL) {
+        unsigned long long hit_addr = regs.rip - 1;
+        for (size_t i = 0; i < bpmngr.count; i++) {
+            if ((unsigned long long)bpmngr.bps[i].addr == hit_addr) {
+                bp = &bpmngr.bps[i];
+                break;
+            }
+        }
+    }
+
+    // No breakpoint currently hit — just resume execution
+    if (bp == NULL) {
+        if (ptrace(PTRACE_CONT, pid, 0, 0) < 0) {
+            perror("ptrace CONT failed");
+        }
+        wait(&wait_status);
+        return;
+    }
+
+    assert(regs.rip == (unsigned long long)bp->addr + 1);
 
     regs.rip = (long)bp->addr;
     ptrace(PTRACE_SETREGS, pid, 0, &regs);
@@ -175,12 +210,13 @@ void list_bp() {
     }
 
     procmsg("Listing all breakpoints:\n");
-    printf("No.\tAddress\t\tFunction/Line\n");
+    printf("No.\tAddress\t\t\tFunction\n");
     for (unsigned i = 0; i < bpmngr.count; ++i) {
         void *addr = bpmngr.bps[i].addr;
-        const char *func_name = get_func_addr(addr);
+        char *func_name = get_func_name_by_addr(addr);
         if (func_name) {
             printf("%d\t%p\t%s\n", i + 1, addr, func_name);
+            free(func_name);
         } else {
             printf("%d\t%p\tUnknown\n", i + 1, addr);
         }
@@ -223,14 +259,24 @@ void inspect_regs(pid_t pid) {
 
 }
 
-void mem_dump(pid_t pid, unsigned from, unsigned to) {
-    procmsg("Displaying PID : %d's memory [0x%08X - 0x%08X]\n", pid, from, to);
-    for (unsigned i = from; i <= to; ++i) {
-        int word = ptrace(PTRACE_PEEKTEXT, pid, i, 0);
-        if (word < 0) {
-            procmsg("Error Occurred while reading memory at 0x%08X\n", i);
+void mem_dump(pid_t pid, uintptr_t from, uintptr_t to) {
+    // Check the process is still alive and stopped before trying to read its memory
+    int status;
+    int rc = waitpid(pid, &status, WNOHANG);
+    if (rc == -1 || (rc == 0 && kill(pid, 0) != 0)) {
+        fprintf(stderr, "Error: process %d is not running. Start the program first.\n", pid);
+        return;
+    }
+
+    procmsg("Displaying PID : %d's memory [0x%016lX - 0x%016lX]\n", pid, from, to);
+    for (uintptr_t addr = from; addr <= to; addr += sizeof(long)) {
+        errno = 0;
+        long word = ptrace(PTRACE_PEEKTEXT, pid, (void *)addr, 0);
+        if (word == -1 && errno != 0) {
+            procmsg("Error reading memory at 0x%016lX: %s\n", addr, strerror(errno));
             break;
         }
+        printf("0x%016lX:  0x%016lX\n", addr, (unsigned long)word);
     }
 }
 
